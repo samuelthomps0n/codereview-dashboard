@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/samuelthomps0n/go-gitlab"
 	"html/template"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/xanzy/go-gitlab"
 )
 
 func main() {
