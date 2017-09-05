@@ -1,0 +1,9 @@
+{{ define "approvals" }}
+	<td width="160px" class="mr__approvals">
+		
+		{{ range .ApprovedBy }}
+			<img src="{{ .User.AvatarURL }}" alt="" class="author__image">
+		{{ end }}
+
+	</td>
+{{ end }}

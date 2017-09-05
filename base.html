@@ -1,0 +1,51 @@
+<html>
+<head>
+	<title>Hello</title>
+	<style>
+		body {
+		  font-family: sans-serif;
+		}
+		.author__image {
+		  border-radius: 50%;
+		  width: 40px;
+		  height: auto;
+		}
+		table {
+		  width: 100%;
+		  border-collapse: collapse;
+		}
+		tr {
+		  border-bottom: 1px solid #d5d5d5;
+		}
+		td {
+		  padding: 10px 0;
+		}
+		.mr__time {
+		  font-size: 13px;
+		}
+		.mr__title {
+		  font-size: 20px;
+		  font-weight: bold;
+		}
+		.mr__approvals {
+		  text-align: right;
+		}
+	</style>
+</head>
+<body>
+	<table>
+		{{ range . }}
+		<tr>
+			<td width="50px">
+				<img src="{{ .Author.AvatarURL }}" alt="" class="author__image">
+			</td>
+			<td>
+				<span class="mr__title">{{ .Title }}</span><br />
+				<span class="mr__time">{{ .CreatedAt }}</span>
+			</td>
+			{{ template "approvals" }}
+		</tr>
+		{{ end }}
+	</table>
+</body>
+</html>
