@@ -6,16 +6,36 @@ import (
 	"log"
 	"net/http"
 
+	"flag"
+
 	"github.com/gorilla/mux"
 	"github.com/xanzy/go-gitlab"
 )
 
+type App struct {
+	gitlabClient *gitlab.Client
+}
+
 func main() {
+	var (
+		httpAddr    = flag.String("http", ":80", "HTTP service address.")
+		baseURL     = flag.String("baseurl", "", "Base URL gitlab endpoint")
+		gitlabToken = flag.String("gitlab-token", "", "The access token for gitlab")
+	)
+	flag.Parse()
+
+	log.Println("Starting server...")
+	log.Printf("HTTP service listening on %s", *httpAddr)
+
+	git := gitlab.NewClient(nil, *gitlabToken)
+	git.SetBaseURL(*baseURL)
+
+	app := &App{git}
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", Index)
+	router.HandleFunc("/", app.Index)
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(*httpAddr, router))
 }
 
 type TemplateData struct {
@@ -23,15 +43,13 @@ type TemplateData struct {
 	*gitlab.MergeRequestApprovals
 }
 
-func Index(w http.ResponseWriter, r *http.Request) {
+func (app *App) Index(w http.ResponseWriter, r *http.Request) {
+	git := app.gitlabClient
 
 	tpl, err := template.ParseFiles("base.html", "approvals.html")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	git := gitlab.NewClient(nil, "")
-	git.SetBaseURL("")
 
 	ListMergeRequestsOptions := &gitlab.ListMergeRequestsOptions{
 		ListOptions: gitlab.ListOptions{
