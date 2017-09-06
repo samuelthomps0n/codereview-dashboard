@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -12,13 +11,14 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
+// App exports some stuff
 type App struct {
 	gitlabClient *gitlab.Client
 }
 
 func main() {
 	var (
-		httpAddr    = flag.String("http", ":80", "HTTP service address.")
+		httpAddr    = flag.String("http", ":8081", "HTTP service address.")
 		baseURL     = flag.String("baseurl", "", "Base URL gitlab endpoint")
 		gitlabToken = flag.String("gitlab-token", "", "The access token for gitlab")
 	)
@@ -38,15 +38,17 @@ func main() {
 	log.Fatal(http.ListenAndServe(*httpAddr, router))
 }
 
-type TemplateData struct {
-	*gitlab.MergeRequest
-	*gitlab.MergeRequestApprovals
+// MergeRequestData request data combined with approvals
+type MergeRequestData struct {
+	MergeRequest *gitlab.MergeRequest
+	Approvals    *gitlab.MergeRequestApprovals
 }
 
+// Index does more things
 func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 	git := app.gitlabClient
 
-	tpl, err := template.ParseFiles("base.html", "approvals.html")
+	tpl, err := template.ParseFiles("base.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,24 +61,29 @@ func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 		State: gitlab.String("opened"),
 	}
 
-	mergeRequests, _, err := git.MergeRequests.ListMergeRequests(172, ListMergeRequestsOptions)
+	mergeRequests, _, err := git.MergeRequests.ListMergeRequests(161, ListMergeRequestsOptions)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(mergeRequests)
 
-	tpl.Execute(w, mergeRequests)
+	var templateData []*MergeRequestData
 
 	for _, mergeRequest := range mergeRequests {
-		approvals, _, err := git.MergeRequests.GetMergeRequestApprovals(172, mergeRequest.ID)
+		approvals, _, err := git.MergeRequests.GetMergeRequestApprovals(161, mergeRequest.ID)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		tpl.ExecuteTemplate(w, "approvals", approvals)
+		mergeRequestData := &MergeRequestData{
+			mergeRequest,
+			approvals,
+		}
 
-		fmt.Println(approvals)
+		templateData = append(templateData, mergeRequestData)
+
 	}
+
+	tpl.Execute(w, templateData)
 
 }

@@ -1,6 +1,6 @@
 <html>
 <head>
-	<title>Hello</title>
+	<title>VictoriaPlum.com Merge Requests</title>
 	<style>
 		body {
 		  font-family: sans-serif;
@@ -30,6 +30,10 @@
 		.mr__approvals {
 		  text-align: right;
 		}
+		a {
+			text-decoration: none;
+			color: inherit;
+		}
 	</style>
 </head>
 <body>
@@ -37,13 +41,18 @@
 		{{ range . }}
 		<tr>
 			<td width="50px">
-				<img src="{{ .Author.AvatarURL }}" alt="" class="author__image">
+				<img src="{{ .MergeRequest.Author.AvatarURL }}" alt="" class="author__image">
 			</td>
 			<td>
-				<span class="mr__title">{{ .Title }}</span><br />
-				<span class="mr__time">{{ .CreatedAt }}</span>
+				<a href="{{ .MergeRequest.WebURL }}" class="mr__title">{{ .MergeRequest.Title }}</a><br />
+				<span class="mr__time">Opened: {{ .MergeRequest.CreatedAt.Format "02 Jan 2006" }}</span>
 			</td>
-			{{ template "approvals" }}
+			<td width="160px" class="mr__approvals">
+				
+				{{ range .Approvals.ApprovedBy }}
+					<img src="{{ .User.AvatarURL }}" alt="" class="author__image">
+				{{ end }}
+			</td>
 		</tr>
 		{{ end }}
 	</table>
