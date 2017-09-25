@@ -1,19 +1,39 @@
 package main
 
 import (
-	"html/template"
+
 	"log"
 	"net/http"
 
 	"flag"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	"github.com/xanzy/go-gitlab"
 )
+
+var projectID = 37
+
+// var projectID = 170
+var clients = make(map[*websocket.Conn]bool) // connected clients
+var broadcast = make(chan JoinedData)        // broadcast channel
+
+var upgrader = websocket.Upgrader{}
 
 // App exports some stuff
 type App struct {
 	gitlabClient *gitlab.Client
+}
+
+// JoinedData is a list of MergeRequestData
+type JoinedData struct {
+	MergeRequests []*MergeRequestData
+}
+
+// MergeRequestData request data combined with approvals
+type MergeRequestData struct {
+	MergeRequest *gitlab.MergeRequest
+	Approvals    *gitlab.MergeRequestApprovals
 }
 
 func main() {
@@ -33,25 +53,21 @@ func main() {
 	app := &App{git}
 
 	router := mux.NewRouter().StrictSlash(true)
+	fs := http.FileServer(http.Dir("./public"))
+	router.Handle("/", fs)
+	router.HandleFunc("/webhook", app.Index)
+	router.HandleFunc("/ws", HandleConnections)
+
+	go HandleUpdates()
+
 	router.HandleFunc("/", app.Index)
 
 	log.Fatal(http.ListenAndServe(*httpAddr, router))
 }
 
-// MergeRequestData request data combined with approvals
-type MergeRequestData struct {
-	MergeRequest *gitlab.MergeRequest
-	Approvals    *gitlab.MergeRequestApprovals
-}
-
 // Index does more things
 func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 	git := app.gitlabClient
-
-	tpl, err := template.ParseFiles("base.html")
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	ListMergeRequestsOptions := &gitlab.ListMergeRequestsOptions{
 		ListOptions: gitlab.ListOptions{
@@ -61,16 +77,15 @@ func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 		State: gitlab.String("opened"),
 	}
 
-	mergeRequests, _, err := git.MergeRequests.ListMergeRequests(161, ListMergeRequestsOptions)
-
+	mergeRequests, _, err := git.MergeRequests.ListMergeRequests(projectID, ListMergeRequestsOptions)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var templateData []*MergeRequestData
+	var templateData JoinedData
 
 	for _, mergeRequest := range mergeRequests {
-		approvals, _, err := git.MergeRequests.GetMergeRequestApprovals(161, mergeRequest.ID)
+		approvals, _, err := git.MergeRequests.GetMergeRequestApprovals(projectID, mergeRequest.ID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -80,10 +95,55 @@ func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 			approvals,
 		}
 
-		templateData = append(templateData, mergeRequestData)
+		templateData.MergeRequests = append(templateData.MergeRequests, mergeRequestData)
 
 	}
 
-	tpl.Execute(w, templateData)
+	broadcast <- templateData
 
+}
+
+// HandleConnections handles the Websocket connection correctly
+func HandleConnections(w http.ResponseWriter, r *http.Request) {
+	// Upgrade initial GET request to a websocket
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Make sure we close the connection when the function returns
+	defer ws.Close()
+
+	// Register our new client
+	clients[ws] = true
+
+	for {
+		var mrd JoinedData
+		// Read in a new message as JSON and map it to a Message object
+		err := ws.ReadJSON(&mrd)
+		if err != nil {
+			log.Printf("error: %v", err)
+			delete(clients, ws)
+			break
+		}
+		// Send the newly received message to the broadcast channel
+		broadcast <- mrd
+	}
+}
+
+// HandleUpdates handles updating the data being passed to all the users connected over websockets
+func HandleUpdates() {
+	for {
+		// Grab the next message from the broadcast channel
+		mrd := <-broadcast
+		// Send it out to every client that is currently connected
+
+		for client := range clients {
+			err := client.WriteJSON(mrd)
+			if err != nil {
+				log.Printf("error: %v", err)
+				client.Close()
+				delete(clients, client)
+			}
+		}
+	}
 }

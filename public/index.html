@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Websocketssss</title>
+    <style>
+		body {
+		  font-family: sans-serif;
+		}
+		.author__image {
+		  border-radius: 50%;
+		  width: 40px;
+		  height: auto;
+		}
+		.label {
+			padding: 5px 10px;
+			border-radius: 3px;
+			color: white;
+			background: red;
+			float: right;
+		}
+		.label.approved {
+			background-color: green;
+		}
+		table {
+		  width: 100%;
+		  border-collapse: collapse;
+		}
+		tr {
+		  border-bottom: 1px solid #d5d5d5;
+		}
+		tr:hover {
+			background: lightgrey;
+		}
+		td {
+		  padding: 10px 0;
+		}
+		.mr__time {
+		  font-size: 13px;
+		}
+		.mr__title {
+		  font-size: 20px;
+		  font-weight: bold;
+		}
+		.mr__approvals {
+		  text-align: right;
+		}
+		a {
+			text-decoration: none;
+			color: inherit;
+		}
+	</style>
+</head>
+
+<body>
+
+	<main id="app">
+		<label>Sort: </label>
+		<select v-model="sortOrder">
+			<option selected value="asc">Oldest First</option>
+			<option value="desc">Newest First</option>
+		</select>
+
+
+
+    	<table>
+			<tr v-for="mergeRequest in orderedMRs">
+				<td width="50px">
+					<img v-bind:src="mergeRequest.MergeRequest.author.avatar_url" v-bind:title="mergeRequest.MergeRequest.author.name" class="author__image">
+				</td>
+				<td>
+					<span v-if="mergeRequest.Approvals.approved_by.length >= 2" class="label approved">Approved</span>
+					<span v-if="mergeRequest.Approvals.approved_by.length < 2" class="label">Code Review</span>
+
+					<a v-bind:href="mergeRequest.MergeRequest.web_url" class="mr__title">{{ mergeRequest.MergeRequest.title }}</a><br />
+					<span class="mr__time">Opened: {{ moment(mergeRequest.MergeRequest.created_at).fromNow() }}</span>
+				</td>
+				<td width="160px" class="mr__approvals">
+					<img v-for="approval in mergeRequest.Approvals.approved_by" v-bind:src="approval.user.avatar_url" v-bind:title="approval.user.name" class="author__image">
+				</td>
+			</tr>
+		</table>
+	</main>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.js"></script>
+	<script src="https://unpkg.com/vue@2.1.3/dist/vue.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.js"></script>
+	<script type="text/javascript">
+
+	fetch('http://localhost:8081/webhook', {
+		method: 'get'
+	});
+
+		new Vue({
+		    el: '#app',
+
+		    data: {
+		        ws: null, // Our websocket
+		        mergeRequests: '', // A running list of chat messages displayed on the screen
+		        sortOrder: 'asc'
+		    },
+
+		    computed: {
+		      orderedMRs: function () {
+		        var self = this;
+		        return _.orderBy(self.mergeRequests.MergeRequests, function(mr) {
+		        	return mr.MergeRequest.created_at;
+		        }, [self.sortOrder])
+		      }
+		    },
+
+		    created: function() {
+		        var self = this;
+		        this.ws = new WebSocket('ws://' + window.location.host + '/ws');
+		        this.ws.addEventListener('message', function(e) {
+		            var mrd = JSON.parse(e.data);
+
+		            self.mergeRequests = mrd;
+
+		        });
+		    }
+		});
+
+	</script>
+</body>
+</html>
