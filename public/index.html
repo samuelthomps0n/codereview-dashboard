@@ -75,6 +75,8 @@
 			<option value="rebel alliance">Rebels</option>
 		</select>
 
+		{{ filteredTeam(filteredRepo(orderedMRs)).length }}
+
 		<table>
 			<tr v-for="mergeRequest in filteredTeam(filteredRepo(orderedMRs))">
 				<td width="70px">
