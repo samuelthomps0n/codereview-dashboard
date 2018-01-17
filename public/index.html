@@ -11,6 +11,13 @@
 		  border-radius: 50%;
 		  width: 40px;
 		  height: auto;
+		  padding: 5px;
+		}
+		.author__image.patternlibrary {
+			border: 5px solid yellow;
+		}
+		.author__image.victoriaplum {
+			border: 5px solid purple;
 		}
 		.label {
 			padding: 5px 10px;
@@ -37,6 +44,8 @@
 		}
 		.mr__time {
 		  font-size: 13px;
+		  margin-top: 5px;
+		  display: block;
 		}
 		.mr__title {
 		  font-size: 20px;
@@ -49,6 +58,19 @@
 			text-decoration: none;
 			color: inherit;
 		}
+		.labels {
+			display: block;
+			margin-top: 5px;
+		}
+		.labels__label {
+			display: inline-block;
+			padding: 5px 10px;
+			background: grey;
+			border-radius: 8px;
+			margin-right: 5px;
+			font-size: 12px;
+			color: white;
+		}
 	</style>
 </head>
 
@@ -57,8 +79,8 @@
 	<main id="app">
 		<label>Sort: </label>
 		<select v-model="sortOrder">
-			<option selected value="asc">Oldest First</option>
-			<option value="desc">Newest First</option>
+			<option selected value="desc">Newest First</option>
+			<option value="asc">Oldest First</option>
 		</select>
 
 		<label>Project: </label>
@@ -75,7 +97,7 @@
 			<option value="rebel alliance">Rebels</option>
 		</select>
 
-		{{ filteredTeam(filteredRepo(orderedMRs)).length }}
+		Viewing {{ filteredTeam(filteredRepo(orderedMRs)).length }} of {{ orderedMRs.length }} active MRs
 
 		<table>
 			<tr v-for="mergeRequest in filteredTeam(filteredRepo(orderedMRs))">
@@ -83,11 +105,14 @@
 					<img v-bind:src="mergeRequest.MergeRequest.author.avatar_url" v-bind:title="mergeRequest.MergeRequest.author.name" class="author__image" v-bind:class="mergeRequest.Repository">
 				</td>
 				<td>
-					<span v-if="mergeRequest.Approvals.approved_by.length >= 2" class="label approved">Approved</span>
-					<span v-if="mergeRequest.Approvals.approved_by.length < 2" class="label">Code Review</span>
+					<span v-if="mergeRequest.Approvals.approved_by.length >= 2" class="label approved">Reviewed</span>
+					<span v-if="mergeRequest.Approvals.approved_by.length < 2" class="label">Needs Reviews</span>
 
 					<a v-bind:href="mergeRequest.MergeRequest.web_url" class="mr__title">{{ mergeRequest.MergeRequest.title }}</a><br />
-					<span class="mr__time">Opened: {{ moment(mergeRequest.MergeRequest.created_at).fromNow() }}</span>
+					<span class="mr__time"><strong>Opened:</strong> {{ moment(mergeRequest.MergeRequest.created_at).fromNow() }}</span>
+					<div class="labels">
+						<span v-for="label in mergeRequest.MergeRequest.labels" class="labels__label">{{ label }}</span>
+					</div>
 				</td>
 				<td width="160px" class="mr__approvals">
 					<img v-for="approval in mergeRequest.Approvals.approved_by" v-bind:src="approval.user.avatar_url" v-bind:title="approval.user.name" class="author__image">
