@@ -1,7 +1,6 @@
 package main
 
 import (
-
 	"log"
 	"net/http"
 
@@ -12,9 +11,11 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
-var projectID = 37
+var victoriaPlumProjectID = 37
+var patternLibraryProjectID = 161
 
-// var projectID = 170
+var projectID = patternLibraryProjectID
+
 var clients = make(map[*websocket.Conn]bool) // connected clients
 var broadcast = make(chan JoinedData)        // broadcast channel
 
@@ -34,11 +35,12 @@ type JoinedData struct {
 type MergeRequestData struct {
 	MergeRequest *gitlab.MergeRequest
 	Approvals    *gitlab.MergeRequestApprovals
+	Repository   string
 }
 
 func main() {
 	var (
-		httpAddr    = flag.String("http", ":8081", "HTTP service address.")
+		httpAddr    = flag.String("http", "", "HTTP service address.")
 		baseURL     = flag.String("baseurl", "", "Base URL gitlab endpoint")
 		gitlabToken = flag.String("gitlab-token", "", "The access token for gitlab")
 	)
@@ -60,7 +62,7 @@ func main() {
 
 	go HandleUpdates()
 
-	router.HandleFunc("/", app.Index)
+	// router.HandleFunc("/", app.Index)
 
 	log.Fatal(http.ListenAndServe(*httpAddr, router))
 }
@@ -69,6 +71,7 @@ func main() {
 func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 	git := app.gitlabClient
 
+	// Set up options for the GitLab API call
 	ListMergeRequestsOptions := &gitlab.ListMergeRequestsOptions{
 		ListOptions: gitlab.ListOptions{
 			Page:    1,
@@ -77,15 +80,18 @@ func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 		State: gitlab.String("opened"),
 	}
 
-	mergeRequests, _, err := git.MergeRequests.ListMergeRequests(projectID, ListMergeRequestsOptions)
+	// Empty struct for storing the data on
+	var templateData JoinedData
+
+	// Get the Merge Requests for VictoriaPlum
+	mergeRequestsVp, _, err := git.MergeRequests.ListMergeRequests(victoriaPlumProjectID, ListMergeRequestsOptions)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var templateData JoinedData
-
-	for _, mergeRequest := range mergeRequests {
-		approvals, _, err := git.MergeRequests.GetMergeRequestApprovals(projectID, mergeRequest.ID)
+	// Loop over VP MRs and get their approvals
+	for _, mergeRequest := range mergeRequestsVp {
+		approvals, _, err := git.MergeRequests.GetMergeRequestApprovals(victoriaPlumProjectID, mergeRequest.ID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -93,14 +99,38 @@ func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 		mergeRequestData := &MergeRequestData{
 			mergeRequest,
 			approvals,
+			"victoriaplum",
 		}
 
 		templateData.MergeRequests = append(templateData.MergeRequests, mergeRequestData)
 
 	}
 
-	broadcast <- templateData
+	// Get the Merge Requests for the Pattern Library
+	mergeRequestsPl, _, err := git.MergeRequests.ListMergeRequests(patternLibraryProjectID, ListMergeRequestsOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	// Loop over the Pattern Library MRs and get their approvals
+	for _, mergeRequest := range mergeRequestsPl {
+		approvals, _, err := git.MergeRequests.GetMergeRequestApprovals(patternLibraryProjectID, mergeRequest.ID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		mergeRequestData := &MergeRequestData{
+			mergeRequest,
+			approvals,
+			"patternlibrary",
+		}
+
+		templateData.MergeRequests = append(templateData.MergeRequests, mergeRequestData)
+
+	}
+
+	// Broadcast back to the Websocket
+	broadcast <- templateData
 }
 
 // HandleConnections handles the Websocket connection correctly
@@ -135,7 +165,6 @@ func HandleUpdates() {
 	for {
 		// Grab the next message from the broadcast channel
 		mrd := <-broadcast
-		// Send it out to every client that is currently connected
 
 		for client := range clients {
 			err := client.WriteJSON(mrd)

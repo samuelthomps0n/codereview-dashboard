@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Websocketssss</title>
-    <style>
+	<meta charset="UTF-8">
+	<title>Websocketssss</title>
+	<style>
 		body {
 		  font-family: sans-serif;
 		}
@@ -11,6 +11,13 @@
 		  border-radius: 50%;
 		  width: 40px;
 		  height: auto;
+		  padding: 5px;
+		}
+		.author__image.patternlibrary {
+			border: 5px solid yellow;
+		}
+		.author__image.victoriaplum {
+			border: 5px solid purple;
 		}
 		.label {
 			padding: 5px 10px;
@@ -37,6 +44,8 @@
 		}
 		.mr__time {
 		  font-size: 13px;
+		  margin-top: 5px;
+		  display: block;
 		}
 		.mr__title {
 		  font-size: 20px;
@@ -49,6 +58,19 @@
 			text-decoration: none;
 			color: inherit;
 		}
+		.labels {
+			display: block;
+			margin-top: 5px;
+		}
+		.labels__label {
+			display: inline-block;
+			padding: 5px 10px;
+			background: grey;
+			border-radius: 8px;
+			margin-right: 5px;
+			font-size: 12px;
+			color: white;
+		}
 	</style>
 </head>
 
@@ -57,23 +79,40 @@
 	<main id="app">
 		<label>Sort: </label>
 		<select v-model="sortOrder">
-			<option selected value="asc">Oldest First</option>
-			<option value="desc">Newest First</option>
+			<option selected value="desc">Newest First</option>
+			<option value="asc">Oldest First</option>
 		</select>
 
+		<label>Project: </label>
+		<select v-model="filterRepo">
+			<option selected value="">All</option>
+			<option value="victoriaplum">VictoriaPlum</option>
+			<option value="patternlibrary">Pattern Library</option>
+		</select>
 
+		<label>Team: </label>
+		<select v-model="filterTeam">
+			<option selected value="">All</option>
+			<option value="the empire">Empire</option>
+			<option value="rebel alliance">Rebels</option>
+		</select>
 
-    	<table>
-			<tr v-for="mergeRequest in orderedMRs">
-				<td width="50px">
-					<img v-bind:src="mergeRequest.MergeRequest.author.avatar_url" v-bind:title="mergeRequest.MergeRequest.author.name" class="author__image">
+		Viewing {{ filteredTeam(filteredRepo(orderedMRs)).length }} of {{ orderedMRs.length }} active MRs
+
+		<table>
+			<tr v-for="mergeRequest in filteredTeam(filteredRepo(orderedMRs))">
+				<td width="70px">
+					<img v-bind:src="mergeRequest.MergeRequest.author.avatar_url" v-bind:title="mergeRequest.MergeRequest.author.name" class="author__image" v-bind:class="mergeRequest.Repository">
 				</td>
 				<td>
-					<span v-if="mergeRequest.Approvals.approved_by.length >= 2" class="label approved">Approved</span>
-					<span v-if="mergeRequest.Approvals.approved_by.length < 2" class="label">Code Review</span>
+					<span v-if="mergeRequest.Approvals.approved_by.length >= 2" class="label approved">Reviewed</span>
+					<span v-if="mergeRequest.Approvals.approved_by.length < 2" class="label">Needs Reviews</span>
 
 					<a v-bind:href="mergeRequest.MergeRequest.web_url" class="mr__title">{{ mergeRequest.MergeRequest.title }}</a><br />
-					<span class="mr__time">Opened: {{ moment(mergeRequest.MergeRequest.created_at).fromNow() }}</span>
+					<span class="mr__time"><strong>Opened:</strong> {{ moment(mergeRequest.MergeRequest.created_at).fromNow() }}</span>
+					<div class="labels">
+						<span v-for="label in mergeRequest.MergeRequest.labels" class="labels__label">{{ label }}</span>
+					</div>
 				</td>
 				<td width="160px" class="mr__approvals">
 					<img v-for="approval in mergeRequest.Approvals.approved_by" v-bind:src="approval.user.avatar_url" v-bind:title="approval.user.name" class="author__image">
@@ -92,33 +131,60 @@
 	});
 
 		new Vue({
-		    el: '#app',
+			el: '#app',
 
-		    data: {
-		        ws: null, // Our websocket
-		        mergeRequests: '', // A running list of chat messages displayed on the screen
-		        sortOrder: 'asc'
-		    },
+			data: {
+				ws: null, // Our websocket
+				mergeRequests: '', // A running list of chat messages displayed on the screen
+				sortOrder: 'desc',
+				filterRepo: '',
+				filterTeam: ''
+			},
 
-		    computed: {
-		      orderedMRs: function () {
-		        var self = this;
-		        return _.orderBy(self.mergeRequests.MergeRequests, function(mr) {
-		        	return mr.MergeRequest.created_at;
-		        }, [self.sortOrder])
-		      }
-		    },
+			computed: {
+			  orderedMRs: function () {
+				var self = this;
+				var mrs = self.mergeRequests.MergeRequests;
+				return _.orderBy(mrs, function(mr) {
+					return mr.MergeRequest.created_at;
+				}, [self.sortOrder])
+			  }
+			},
 
-		    created: function() {
-		        var self = this;
-		        this.ws = new WebSocket('ws://' + window.location.host + '/ws');
-		        this.ws.addEventListener('message', function(e) {
-		            var mrd = JSON.parse(e.data);
+			methods: {
+				filteredRepo: function (mrs) {
+					var self = this;
+					
+					return mrs.filter(function(mr) {
+						if(Object.keys(self.filterRepo).length !== 0) {
+							return mr.Repository === self.filterRepo;
+						}
+						return true;
+					})
+				},
+				filteredTeam: function (mrs) {
+					var self = this;
 
-		            self.mergeRequests = mrd;
+					return mrs.filter(function(mr) {
+						if(Object.keys(self.filterTeam).length !== 0) {
+							return mr.MergeRequest.labels.includes(self.filterTeam);
+						}
+						return true;
+					})
+				}
+			},
 
-		        });
-		    }
+			created: function() {
+				var self = this;
+				this.ws = new WebSocket('ws://' + window.location.host + '/ws');
+
+				this.ws.addEventListener('message', function(e) {
+					var mrd = JSON.parse(e.data);
+
+					self.mergeRequests = mrd;
+
+				});
+			}
 		});
 
 	</script>
