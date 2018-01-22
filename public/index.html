@@ -39,6 +39,12 @@
 		tr:hover {
 			background: lightgrey;
 		}
+		tr.cannot_be_merged {
+			background: #FB01064C;
+		}
+		tr.cannot_be_merged:hover {
+			background: #FB01069C;
+		}
 		td {
 		  padding: 10px 0;
 		}
@@ -100,7 +106,7 @@
 		Viewing {{ filteredTeam(filteredRepo(orderedMRs)).length }} of {{ orderedMRs.length }} active MRs
 
 		<table>
-			<tr v-for="mergeRequest in filteredTeam(filteredRepo(orderedMRs))">
+			<tr v-for="mergeRequest in filteredTeam(filteredRepo(orderedMRs))" v-bind:class="mergeRequest.MergeRequest.merge_status">
 				<td width="70px">
 					<img v-bind:src="mergeRequest.MergeRequest.author.avatar_url" v-bind:title="mergeRequest.MergeRequest.author.name" class="author__image" v-bind:class="mergeRequest.Repository">
 				</td>
