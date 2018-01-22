@@ -77,6 +77,17 @@
 			font-size: 12px;
 			color: white;
 		}
+		.label-container {
+			display: block;
+			border-top: 1px solid #d5d5d5;
+			border-bottom: 1px solid #d5d5d5;
+			padding: 10px;
+			margin: 10px 0;
+		}
+		.label-inputs {
+			display: inline-block;
+			min-width: 220px;
+		}
 	</style>
 </head>
 
@@ -103,10 +114,17 @@
 			<option value="rebel alliance">Rebels</option>
 		</select>
 
-		Viewing {{ filteredTeam(filteredRepo(orderedMRs)).length }} of {{ orderedMRs.length }} active MRs
+		Viewing {{ filteredLabel(filteredTeam(filteredRepo(orderedMRs))).length }} of {{ orderedMRs.length }} active MRs
+
+		<div class="label-container">
+			<div v-for="label in labels.Labels" v-if="labels" v-if="label.open_merge_requests_count != '0'" class="label-inputs">
+				<input type="checkbox" v-model="filterLabels" id="label.name" name="label.name" :value="label.name">
+				<label for="label.name">{{ label.name }} ({{ label.open_merge_requests_count }})
+			</div>
+		</div>
 
 		<table>
-			<tr v-for="mergeRequest in filteredTeam(filteredRepo(orderedMRs))" v-bind:class="mergeRequest.MergeRequest.merge_status">
+			<tr v-for="mergeRequest in filteredLabel(filteredTeam(filteredRepo(orderedMRs)))" v-bind:class="mergeRequest.MergeRequest.merge_status">
 				<td width="70px">
 					<img v-bind:src="mergeRequest.MergeRequest.author.avatar_url" v-bind:title="mergeRequest.MergeRequest.author.name" class="author__image" v-bind:class="mergeRequest.Repository">
 				</td>
@@ -144,7 +162,9 @@
 				mergeRequests: '', // A running list of chat messages displayed on the screen
 				sortOrder: 'desc',
 				filterRepo: '',
-				filterTeam: ''
+				filterTeam: '',
+				labels: {},
+				filterLabels: []
 			},
 
 			computed: {
@@ -177,11 +197,31 @@
 						}
 						return true;
 					})
+				},
+				filteredLabel: function (mrs) {
+					var self = this;
+
+					return mrs.filter(function(mr) {
+						if(Object.keys(self.filterLabels).length !== 0) {
+							return self.filterLabels.some(function(value) {
+								return mr.MergeRequest.labels.includes(value);
+							})
+						}
+						return true;
+					})
 				}
 			},
 
 			created: function() {
 				var self = this;
+
+				fetch("/api/labels")
+					.then(r => r.json())
+					.then(json => {
+						this.labels = json;
+					});
+
+
 				this.ws = new WebSocket('ws://' + window.location.host + '/ws');
 
 				this.ws.addEventListener('message', function(e) {

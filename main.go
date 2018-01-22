@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -31,6 +33,11 @@ type JoinedData struct {
 	MergeRequests []*MergeRequestData
 }
 
+// JoinedLabels is a list of Labels
+type JoinedLabels struct {
+	Labels []*gitlab.Label
+}
+
 // MergeRequestData request data combined with approvals
 type MergeRequestData struct {
 	MergeRequest *gitlab.MergeRequest
@@ -59,6 +66,7 @@ func main() {
 	router.Handle("/", fs)
 	router.HandleFunc("/webhook", app.Index)
 	router.HandleFunc("/ws", HandleConnections)
+	router.HandleFunc("/api/labels", app.GetLabels)
 
 	go HandleUpdates()
 
@@ -131,6 +139,37 @@ func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 
 	// Broadcast back to the Websocket
 	broadcast <- templateData
+}
+
+// GetLabels returns a JSON array of labels on the projects
+func (app *App) GetLabels(w http.ResponseWriter, r *http.Request) {
+	var labelData JoinedLabels
+	git := app.gitlabClient
+
+	patternLibraryLabels, _, err := git.Labels.ListLabels(patternLibraryProjectID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, label := range patternLibraryLabels {
+		labelData.Labels = append(labelData.Labels, label)
+	}
+
+	victoriaPlumLabels, _, err := git.Labels.ListLabels(victoriaPlumProjectID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, label := range victoriaPlumLabels {
+		labelData.Labels = append(labelData.Labels, label)
+	}
+
+	output, err := json.Marshal(labelData)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Fprintf(w, string(output))
 }
 
 // HandleConnections handles the Websocket connection correctly
