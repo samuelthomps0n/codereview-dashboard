@@ -20,6 +20,12 @@
   version = "v1.4.0"
 
 [[projects]]
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/xanzy/go-gitlab"
   packages = ["."]
@@ -29,6 +35,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0660b5a3ad6edec9fd88b28497ff23304f4b41ff112471bc7b1b77bb8a0138bb"
+  inputs-digest = "5c6cebcdd7d50e6a0aa7d7f225cfea9a82ff7f28b65f694b5b80c7ddcb19d1d9"
   solver-name = "gps-cdcl"
   solver-version = 1
