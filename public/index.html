@@ -16,17 +16,19 @@
 		</select>
 
 		<label>Project: </label>
-		<select v-model="filterRepo">
+		<select v-model="activeProject">
 			<option selected value="">All</option>
-			<option v-for="project in projects" v-bind:value="project.id">{{ project.name }}</option>
+			<option v-for="project in projects" v-bind:value="project.Project.id">{{ project.Project.name }}</option>
 		</select>
 
 		Viewing {{ filteredLabel(filteredRepo(orderedMRs)).length }} of {{ orderedMRs.length }} active MRs
 
-		<div class="label-container">
-			<div v-for="label in labels.Labels" v-if="labels" v-if="label.open_merge_requests_count != '0'" class="label-inputs">
-				<input type="checkbox" v-model="filterLabels" id="label.name" name="label.name" :value="label.name">
-				<label for="label.name">{{ label.name }} ({{ label.open_merge_requests_count }})
+		<div class="label-container" v-if="activeProject">
+			<div v-for="label in activeLabels(activeProject)">
+				<span v-for="input in label.labels" class="label-inputs">
+					<input type="checkbox" v-model="filterLabels" v-bind:id="input.name" v-bind:name="input.name" :value="input.name">
+					<label v-bind:for="input.name">{{ input.name }} ({{ input.open_merge_requests_count }})
+				</span>
 			</div>
 		</div>
 
