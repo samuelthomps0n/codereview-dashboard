@@ -18,18 +18,10 @@
 		<label>Project: </label>
 		<select v-model="filterRepo">
 			<option selected value="">All</option>
-			<option value="victoriaplum">VictoriaPlum</option>
-			<option value="patternlibrary">Pattern Library</option>
+			<option v-for="project in projects" v-bind:value="project.id">{{ project.name }}</option>
 		</select>
 
-		<label>Team: </label>
-		<select v-model="filterTeam">
-			<option selected value="">All</option>
-			<option value="the empire">Empire</option>
-			<option value="rebel alliance">Rebels</option>
-		</select>
-
-		Viewing {{ filteredLabel(filteredTeam(filteredRepo(orderedMRs))).length }} of {{ orderedMRs.length }} active MRs
+		Viewing {{ filteredLabel(filteredRepo(orderedMRs)).length }} of {{ orderedMRs.length }} active MRs
 
 		<div class="label-container">
 			<div v-for="label in labels.Labels" v-if="labels" v-if="label.open_merge_requests_count != '0'" class="label-inputs">
@@ -39,7 +31,7 @@
 		</div>
 
 		<table>
-			<tr v-for="mergeRequest in filteredLabel(filteredTeam(filteredRepo(orderedMRs)))" v-bind:class="mergeRequest.MergeRequest.merge_status">
+			<tr v-for="mergeRequest in filteredLabel(filteredRepo(orderedMRs))" v-bind:class="mergeRequest.MergeRequest.merge_status">
 				<td width="70px">
 					<img v-bind:src="userAvatar(mergeRequest.MergeRequest.author.id)" v-bind:title="mergeRequest.MergeRequest.author.name" class="author__image" v-bind:class="mergeRequest.Repository">
 				</td>

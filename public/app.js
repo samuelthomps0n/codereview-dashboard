@@ -13,6 +13,7 @@ new Vue({
 		filterTeam: '',
 		labels: {},
 		users: {},
+		projects: {},
 		filterLabels: []
 	},
 
@@ -42,18 +43,8 @@ new Vue({
 			var self = this;
 			
 			return mrs.filter(function(mr) {
-				if(Object.keys(self.filterRepo).length !== 0) {
-					return mr.Repository === self.filterRepo;
-				}
-				return true;
-			})
-		},
-		filteredTeam: function (mrs) {
-			var self = this;
-
-			return mrs.filter(function(mr) {
-				if(Object.keys(self.filterTeam).length !== 0) {
-					return mr.MergeRequest.labels.includes(self.filterTeam);
+				if(self.filterRepo !== '') {
+					return mr.MergeRequest.project_id === self.filterRepo;
 				}
 				return true;
 			})
@@ -84,6 +75,11 @@ new Vue({
 			.then(r => r.json())
 			.then(json => {
 				this.users = json;
+			});
+		fetch("/api/projects")
+			.then(r => r.json())
+			.then(json => {
+				this.projects = json;
 			});
 
 
