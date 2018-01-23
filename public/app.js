@@ -30,7 +30,7 @@ new Vue({
 		userAvatar: function(id) {
 			var self = this;
 			
-			var user = [...self.users.Users].filter(function(user) {
+			var user = [...self.users].filter(function(user) {
 				return user.id === id;
 			})
 			if(Object.keys(user).length !== 0) {

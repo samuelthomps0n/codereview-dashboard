@@ -36,11 +36,6 @@ type JoinedLabels struct {
 	Labels []*gitlab.Label
 }
 
-// JoinedUsers is a list of Users
-type JoinedUsers struct {
-	Users []*gitlab.User
-}
-
 // MergeRequestData request data combined with approvals
 type MergeRequestData struct {
 	MergeRequest *gitlab.MergeRequest
@@ -153,7 +148,6 @@ func (app *App) GetLabels(w http.ResponseWriter, r *http.Request) {
 
 // GetUsers returns a JSON array of users
 func (app *App) GetUsers(w http.ResponseWriter, r *http.Request) {
-	var userData JoinedUsers
 	git := app.gitlabClient
 
 	ListUsersOptions := &gitlab.ListUsersOptions{
@@ -168,11 +162,7 @@ func (app *App) GetUsers(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	for _, user := range users {
-		userData.Users = append(userData.Users, user)
-	}
-
-	output, err := json.Marshal(userData)
+	output, err := json.Marshal(users)
 	if err != nil {
 		log.Fatal(err)
 	}
