@@ -72,6 +72,7 @@ func main() {
 	router.HandleFunc("/ws", HandleConnections)
 	router.HandleFunc("/api/labels", app.GetLabels)
 	router.HandleFunc("/api/users", app.GetUsers)
+	router.HandleFunc("/api/projects", app.GetProjects)
 
 	go HandleUpdates()
 
@@ -173,6 +174,30 @@ func (app *App) GetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	output, err := json.Marshal(userData)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Fprintf(w, string(output))
+}
+
+// GetProjects returns a JSON array of projects
+func (app *App) GetProjects(w http.ResponseWriter, r *http.Request) {
+	git := app.gitlabClient
+
+	ListProjectOptions := &gitlab.ListProjectsOptions{
+		ListOptions: gitlab.ListOptions{
+			Page:    1,
+			PerPage: 100,
+		},
+	}
+
+	projects, _, err := git.Projects.ListProjects(ListProjectOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	output, err := json.Marshal(projects)
 	if err != nil {
 		log.Fatal(err)
 	}
