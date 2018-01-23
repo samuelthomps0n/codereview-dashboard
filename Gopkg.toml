@@ -28,6 +28,6 @@
 [[constraint]]
   name = "github.com/xanzy/go-gitlab"
   branch = "master"
-  source = "github.com/samuelthomps0n/go-gitlab"
+  source = "github.com/xanzy/go-gitlab"
 #  version = "0.6.1"
 

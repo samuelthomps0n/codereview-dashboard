@@ -2,93 +2,8 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<title>Websocketssss</title>
-	<style>
-		body {
-		  font-family: sans-serif;
-		}
-		.author__image {
-		  border-radius: 50%;
-		  width: 40px;
-		  height: auto;
-		  padding: 5px;
-		}
-		.author__image.patternlibrary {
-			border: 5px solid yellow;
-		}
-		.author__image.victoriaplum {
-			border: 5px solid purple;
-		}
-		.label {
-			padding: 5px 10px;
-			border-radius: 3px;
-			color: white;
-			background: red;
-			float: right;
-		}
-		.label.approved {
-			background-color: green;
-		}
-		table {
-		  width: 100%;
-		  border-collapse: collapse;
-		}
-		tr {
-		  border-bottom: 1px solid #d5d5d5;
-		}
-		tr:hover {
-			background: lightgrey;
-		}
-		tr.cannot_be_merged {
-			background: #FB01064C;
-		}
-		tr.cannot_be_merged:hover {
-			background: #FB01069C;
-		}
-		td {
-		  padding: 10px 0;
-		}
-		.mr__time {
-		  font-size: 13px;
-		  margin-top: 5px;
-		  display: block;
-		}
-		.mr__title {
-		  font-size: 20px;
-		  font-weight: bold;
-		}
-		.mr__approvals {
-		  text-align: right;
-		}
-		a {
-			text-decoration: none;
-			color: inherit;
-		}
-		.labels {
-			display: block;
-			margin-top: 5px;
-		}
-		.labels__label {
-			display: inline-block;
-			padding: 5px 10px;
-			background: grey;
-			border-radius: 8px;
-			margin-right: 5px;
-			font-size: 12px;
-			color: white;
-		}
-		.label-container {
-			display: block;
-			border-top: 1px solid #d5d5d5;
-			border-bottom: 1px solid #d5d5d5;
-			padding: 10px;
-			margin: 10px 0;
-		}
-		.label-inputs {
-			display: inline-block;
-			min-width: 220px;
-		}
-	</style>
+	<title>Code Review Dashboard</title>
+	<link rel="stylesheet" type="text/css" href="./styles.css">
 </head>
 
 <body>
@@ -126,7 +41,7 @@
 		<table>
 			<tr v-for="mergeRequest in filteredLabel(filteredTeam(filteredRepo(orderedMRs)))" v-bind:class="mergeRequest.MergeRequest.merge_status">
 				<td width="70px">
-					<img v-bind:src="mergeRequest.MergeRequest.author.avatar_url" v-bind:title="mergeRequest.MergeRequest.author.name" class="author__image" v-bind:class="mergeRequest.Repository">
+					<img v-bind:src="userAvatar(mergeRequest.MergeRequest.author.id)" v-bind:title="mergeRequest.MergeRequest.author.name" class="author__image" v-bind:class="mergeRequest.Repository">
 				</td>
 				<td>
 					<span v-if="mergeRequest.Approvals.approved_by.length >= 2" class="label approved">Reviewed</span>
@@ -148,90 +63,7 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.js"></script>
 	<script src="https://unpkg.com/vue@2.1.3/dist/vue.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.js"></script>
-	<script type="text/javascript">
-
-	fetch('http://localhost:8081/webhook', {
-		method: 'get'
-	});
-
-		new Vue({
-			el: '#app',
-
-			data: {
-				ws: null, // Our websocket
-				mergeRequests: '', // A running list of chat messages displayed on the screen
-				sortOrder: 'desc',
-				filterRepo: '',
-				filterTeam: '',
-				labels: {},
-				filterLabels: []
-			},
-
-			computed: {
-			  orderedMRs: function () {
-				var self = this;
-				var mrs = self.mergeRequests.MergeRequests;
-				return _.orderBy(mrs, function(mr) {
-					return mr.MergeRequest.created_at;
-				}, [self.sortOrder])
-			  }
-			},
-
-			methods: {
-				filteredRepo: function (mrs) {
-					var self = this;
-					
-					return mrs.filter(function(mr) {
-						if(Object.keys(self.filterRepo).length !== 0) {
-							return mr.Repository === self.filterRepo;
-						}
-						return true;
-					})
-				},
-				filteredTeam: function (mrs) {
-					var self = this;
-
-					return mrs.filter(function(mr) {
-						if(Object.keys(self.filterTeam).length !== 0) {
-							return mr.MergeRequest.labels.includes(self.filterTeam);
-						}
-						return true;
-					})
-				},
-				filteredLabel: function (mrs) {
-					var self = this;
-
-					return mrs.filter(function(mr) {
-						if(Object.keys(self.filterLabels).length !== 0) {
-							return self.filterLabels.some(function(value) {
-								return mr.MergeRequest.labels.includes(value);
-							})
-						}
-						return true;
-					})
-				}
-			},
-
-			created: function() {
-				var self = this;
-
-				fetch("/api/labels")
-					.then(r => r.json())
-					.then(json => {
-						this.labels = json;
-					});
-
-
-				this.ws = new WebSocket('ws://' + window.location.host + '/ws');
-
-				this.ws.addEventListener('message', function(e) {
-					var mrd = JSON.parse(e.data);
-
-					self.mergeRequests = mrd;
-
-				});
-			}
-		});
+	<script src="./app.js"></script>
 
 	</script>
 </body>
