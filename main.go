@@ -31,15 +31,22 @@ type JoinedData struct {
 	MergeRequests []*MergeRequestData
 }
 
-// JoinedLabels is a list of Labels
-type JoinedLabels struct {
-	Labels []*gitlab.Label
-}
-
 // MergeRequestData request data combined with approvals
 type MergeRequestData struct {
 	MergeRequest *gitlab.MergeRequest
 	Approvals    *gitlab.MergeRequestApprovals
+}
+
+// ProjectData includes the ProjectID, Project struct and Labels
+type Project struct {
+	Project   *gitlab.Project
+	Labels    []*gitlab.Label
+	ProjectID int `json:"project_id"`
+}
+
+// ProjectListData is a list of ProjectData structs
+type ProjectList struct {
+	Project []Project
 }
 
 func main() {
@@ -65,7 +72,6 @@ func main() {
 	router.Handle("/styles.css", fs)
 	router.HandleFunc("/webhook", app.Index)
 	router.HandleFunc("/ws", HandleConnections)
-	router.HandleFunc("/api/labels", app.GetLabels)
 	router.HandleFunc("/api/users", app.GetUsers)
 	router.HandleFunc("/api/projects", app.GetProjects)
 
@@ -116,37 +122,6 @@ func (app *App) Index(w http.ResponseWriter, r *http.Request) {
 	broadcast <- templateData
 }
 
-// GetLabels returns a JSON array of labels on the projects
-func (app *App) GetLabels(w http.ResponseWriter, r *http.Request) {
-	var labelData JoinedLabels
-	git := app.gitlabClient
-
-	patternLibraryLabels, _, err := git.Labels.ListLabels(patternLibraryProjectID)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, label := range patternLibraryLabels {
-		labelData.Labels = append(labelData.Labels, label)
-	}
-
-	victoriaPlumLabels, _, err := git.Labels.ListLabels(victoriaPlumProjectID)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, label := range victoriaPlumLabels {
-		labelData.Labels = append(labelData.Labels, label)
-	}
-
-	output, err := json.Marshal(labelData)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Fprintf(w, string(output))
-}
-
 // GetUsers returns a JSON array of users
 func (app *App) GetUsers(w http.ResponseWriter, r *http.Request) {
 	git := app.gitlabClient
@@ -173,6 +148,9 @@ func (app *App) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 // GetProjects returns a JSON array of projects
 func (app *App) GetProjects(w http.ResponseWriter, r *http.Request) {
+	var projectList ProjectList
+	var project Project
+
 	git := app.gitlabClient
 
 	ListProjectOptions := &gitlab.ListProjectsOptions{
@@ -187,7 +165,24 @@ func (app *App) GetProjects(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	output, err := json.Marshal(projects)
+	for _, apiProject := range projects {
+		project.Project = apiProject
+		// Get project Labels
+		labels, _, err := git.Labels.ListLabels(apiProject.ID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		project.Labels = labels
+
+		// Set ProjectID
+		project.ProjectID = apiProject.ID
+
+		// Save to the list
+		projectList.Project = append(projectList.Project, project)
+	}
+
+	output, err := json.Marshal(projectList)
 	if err != nil {
 		log.Fatal(err)
 	}

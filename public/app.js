@@ -1,4 +1,5 @@
-fetch('http://localhost:8081/webhook', {
+// Force the Websocket to update
+fetch('http://' + window.location.host + '/webhook', {
 	method: 'get'
 });
 
@@ -6,10 +7,10 @@ new Vue({
 	el: '#app',
 
 	data: {
-		ws: null, // Our websocket
-		mergeRequests: '', // A running list of chat messages displayed on the screen
+		ws: null,
+		mergeRequests: '',
 		sortOrder: 'desc',
-		filterRepo: '',
+		activeProject: '',
 		filterTeam: '',
 		labels: {},
 		users: {},
@@ -20,6 +21,7 @@ new Vue({
 	computed: {
 		orderedMRs: function () {
 			var self = this;
+			
 			var mrs = self.mergeRequests.MergeRequests;
 			return _.orderBy(mrs, function(mr) {
 				return mr.MergeRequest.created_at;
@@ -39,12 +41,21 @@ new Vue({
 			}
 			return '';
 		},
+		activeLabels: function(id) {
+			var self = this;
+
+			if(Object.keys(self.labels).length !== 0) {
+				return [...self.labels].filter(function(label) {
+					return label.project_id === self.activeProject;
+				})
+			}
+		},
 		filteredRepo: function (mrs) {
 			var self = this;
 			
 			return mrs.filter(function(mr) {
-				if(self.filterRepo !== '') {
-					return mr.MergeRequest.project_id === self.filterRepo;
+				if(self.activeProject !== '') {
+					return mr.MergeRequest.project_id === self.activeProject;
 				}
 				return true;
 			})
@@ -66,30 +77,36 @@ new Vue({
 	created: function() {
 		var self = this;
 
-		fetch("/api/labels")
-			.then(r => r.json())
-			.then(json => {
-				this.labels = json;
-			});
 		fetch("/api/users")
 			.then(r => r.json())
 			.then(json => {
-				this.users = json;
+				self.users = json;
 			});
 		fetch("/api/projects")
 			.then(r => r.json())
 			.then(json => {
-				this.projects = json;
+				self.projects = json.Project;
+
+				self.labels = _.map(self.projects, function(value, key) {
+					return { labels: value.Labels, project_id: value.project_id };
+				});
+
 			});
 
+		self.ws = new WebSocket('ws://' + window.location.host + '/ws');
 
-		this.ws = new WebSocket('ws://' + window.location.host + '/ws');
-
-		this.ws.addEventListener('message', function(e) {
+		self.ws.addEventListener('message', function(e) {
 			var mrd = JSON.parse(e.data);
 
 			self.mergeRequests = mrd;
 
 		});
+	},
+
+	watch: {
+		activeProject: function(val, oldVal) {
+			this.filterLabels = [];
+		}
 	}
+
 });
